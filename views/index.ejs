@@ -30,25 +30,6 @@
     <script>
         var userName = '<%=username %>';
 
-        /*
-        var setUserName = () => {
-            while(userName == "") {
-                userName = prompt("Enter your name");
-            }
-            
-            $.post(
-                '/login', 
-                { userName }, 
-                (data) => {
-
-                }
-            ).fail(() => {
-                alert("Error when setting user name");
-                userName = "";
-                setUserName();
-            });
-        }
-*/
         function joinGame_click() {
             alert($(this).attr("data-host"));
         }

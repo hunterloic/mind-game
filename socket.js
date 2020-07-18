@@ -2,41 +2,68 @@ const GameModel = require('./models/game');
 const GameBusiness = require('./business/game');
 const SiteBusiness = require('./business/site');
 
+
+
 const socket = (io) => {
 
     io.on('connection', (socket) => {
         console.log('a user connected');
+
+
+        var gameBusiness;
+        var username;
+        var event;
+            
+        const sendError = (message) => {
+            var messageFormatted = event + ' : ' + username + ' : ' + (gameBusiness ? (gameBusiness.game  ? gameBusiness.game.host : '') : '') + ' : ' + message;
+            console.log(event + ' : ' + message);
+            socket.emit('err', {error : event + ' : ' + message});
+        }
     
         socket.on('playerJoin', (joinInfos) => {
+
             try {
+
+                event = 'playerJoin';
+                username = joinInfos.username;
 
                 console.log('player join');
                 
-                // var gameBusiness = SiteBusiness.getGameBusiness(joinInfos.gameHost);
                 var game = SiteBusiness.getGame(joinInfos.gameHost);
                 if(!game) {
+                    sendError('SiteBusiness init error');
                     return;
                 }
-                var gameBusiness = new GameBusiness(game);
+                
+                gameBusiness = new GameBusiness(game);
                 if(!gameBusiness) {
+                    sendError('GameBusiness init error');
                     return;
                 }
     
+
                 // check if the game is not started
                 if(gameBusiness.game.status != 0) {
-                    console.log('game already started');
+                    sendError('game already started');
                     return;
                 }
 
+                // check if already in game
                 if(gameBusiness.isAlreadyInGame(joinInfos.username)) {
+                    console.log('already in game');
                     return;
                 }
 
-                gameBusiness.joinGame(joinInfos.username);
+                // join game and check error
+                if(!gameBusiness.joinGame(joinInfos.username)) {
+                    sendError(gameBusiness.error);
+                    return;
+                }
 
                 io.sockets.emit('playerJoin', joinInfos);
             } catch(ex) {
                 console.log(ex);
+                socket.emit('err', {error : ex});
             }
 
         });
@@ -44,24 +71,18 @@ const socket = (io) => {
         socket.on('playerLeave', (leaveInfos) => {
             try {
 
-                console.log("disconnect");
-
-                // var gameBusiness = SiteBusiness.getGameBusiness(leaveInfos.gameHost);
-                var game = SiteBusiness.getGame(leaveInfos.gameHost);
-                if(!game) {
-                    return;
-                }
-                var gameBusiness = new GameBusiness(game);
                 if(!gameBusiness) {
+                    sendError('GameBusiness init error');
                     return;
                 }
 
-                gameBusiness.leaveGame(leaveInfos.username);
+                gameBusiness.leaveGame(username);
 
-                io.sockets.emit('playerLeave', leaveInfos);
+                io.sockets.emit('playerLeave', { gameHost : gameBusiness.game.host, username : username});
                 
             } catch(ex) {
                 console.log(ex);
+                socket.emit('error', {error : ex});
             }
 
         });

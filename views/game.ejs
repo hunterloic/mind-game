@@ -16,25 +16,41 @@
         var username = '<%=username%>';
         var socket;
 
+        // lobby loop
         var lobbyLoop = setInterval(function(){
             if(lobbyExecuteList.length > 0) {
                 lobbyExecuteList.shift()();
             }
         }, 200)
 
+        var btnStartClick = () => {
+            lobbyExecuteList.push(() => {
+                socket.emit('startGame');
+            });
+        };
+
         $(document).ready(() => {
             socket = io();
 
+            // User events
             window.onbeforeunload = function (e) {
-                socket.emit('playerLeave', { gameHost:gameHost, username:username });
+                socket.emit('playerLeave');
             };
             
             lobbyExecuteList.push(() => {
                 socket.emit('playerJoin', { gameHost:gameHost, username:username });
             });
             
-            socket.on('playerJoin', (infos) => {
+            // Socket events
+            socket.on('err', (data) => {
+                lobbyExecuteList.push(() => {
+                    clearInterval(lobbyLoop);
+                    alert(JSON.stringify(data));
+                    window.location.href = "/";
+                });
+            });
 
+            socket.on('playerJoin', (infos) => {
                 lobbyExecuteList.push(() => {
                     var $li = $("<li/>");
                     $li.attr("data-player-name", infos.username);
@@ -49,6 +65,9 @@
                     $("#player-list>ul").find("[data-player-name=" + infos.username + "]").remove();
                 });
             });
+
+            // UI events
+            $("#btn-start").click(btnStartClick);
         });
 
 
@@ -57,6 +76,11 @@
     <div id="lobby">
         <div>welcome to the game of <%=game.host %> !</div>
         <div>Waiting for the host to start the game ...</div>
+        <% if (username == game.host) { %>
+            <div>
+                <button id="btn-start">Start Game</button>
+            </div>
+        <% } %>
         <div>List of players in the game</div>
         <div id="player-list">
             <ul>
