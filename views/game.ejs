@@ -5,6 +5,71 @@
     <meta name="viewport" content="width=device-width">
     <meta http-equiv="X-UA-Compatible" content="ie=edge">
     <title>Mind game</title>
+
+    <style>
+        body {
+            -webkit-user-select: none; /* Safari */        
+            -moz-user-select: none; /* Firefox */
+            -ms-user-select: none; /* IE10+/Edge */
+            user-select: none; /* Standard */
+        }
+
+        #user-played-card {
+            height:70px;
+        }
+
+        .deck-card {
+            display:inline-block;
+            width: 30px;
+            height: 30px;
+            border: 1px solid black;
+            color:black;
+            padding: 15px;
+            margin: 5px;
+
+            font-size: 20px;
+
+            background-color:khaki;
+        }
+
+        .played-card {
+            display:inline-block;
+            width: 30px;
+            height: 30px;
+            padding: 15px;
+            margin: 5px;
+            
+            font-size: 20px;
+            
+            background-color:palegreen;
+
+            color:red;
+            border: 2px solid red;
+            font-weight: bold;
+        }
+
+        .user-card {
+            display:inline-block;
+            width: 30px;
+            height: 30px;
+            border: 1px solid black;
+            color:black;
+            padding: 15px;
+            margin: 5px;
+            
+            font-size: 20px;
+            font-weight:normal;
+            
+            background-color:palegreen;
+        }
+
+        .selected {
+            color:red;
+            border: 2px solid red;
+            font-weight: bold;
+        }
+    </style>
+
 </head>
 <body>
     <script src="/socket.io/socket.io.js"></script>
@@ -18,24 +83,146 @@
         var game;
 
 
-        // Scree Layout process
+        // Screen Layout process
         var displayBoard = () => {
             $("#lobby").css("display", "none");
             $("#game").css("display", "");
 
             displayOtherPlayers();
             displayCurrentCards();
-        };
+            displayPlayedCard();
+            displayCards();
+
+        }
+
+        var displayPlayedCard = () => {
+            
+        }
+
+        var displayCards = () => {
+
+            var currentPlayerArr = game.players.filter((p) => { return p.name == username });
+            if(currentPlayerArr.length ==0) {
+                return;
+            }
+            var currentPlayer = currentPlayerArr[0];
+
+            // remove used cards
+            var $toRemoveList = new Array();
+            var $userCards = $("#game #user-cards").find(".user-card");
+            for(var i=0; i< $userCards.length; i++) {
+                $card = $($userCards[i]);
+                if(!currentPlayer.cards.includes($card.attr("data-card-no"))) {
+                    $card.remove();
+                } else {
+                    if(isCardPlayed($card.attr("data-card-no"))) {
+                        $card.remove();
+                    }
+                }
+            }
+
+            // add not used cards
+            currentPlayer.cards.forEach((c) => {
+                displayOneCard(c);
+            });
+        }
+
+        var displayOneCard = (card) => {
+            if(isCardPlayed(card)) {
+                return;
+            }
+
+            var $cardItem = $("#game #user-cards").find("[data-card-no=" + card + "]");
+            if($cardItem.length == 0) {
+                $cardItem = $("<span/>");
+                $cardItem.click(userCardClick);
+                $("#game #user-cards").append($cardItem);
+            }
+            
+            $cardItem.attr("data-card-no", card);
+            $cardItem.addClass("user-card");
+            $cardItem.html(card);
+        }
+
+        var isCardPlayed = (card) => {
+            var $playedCard = getPlayedCard();
+            if($playedCard.lenght == 0) {
+                return false;
+            }
+            if($playedCard.attr("data-card-no") == card) {
+                return true;
+            }
+            return false;
+        }
+
+        var getPlayedCard = () => {
+            return $("#user-played-card").find(".played-card");
+        }
+
+        var getUserCard = (card) => {
+            return $("#game #user-cards").find(".user-card[data-card-no='" + card + "']");
+        }
 
         var displayOtherPlayers = () => {
             game.players.filter((p) => { return p.name != username }).forEach(p => {
-                $player = $("div");
-                $player.html(p.name);
-                $("#game #player-list").append($player);
+                displayOneOtherPlayer(p.name);
             });
         };
 
+        var displayOneOtherPlayer = (playername) => {
+
+            if(!game) {
+                return;
+            }
+
+            var players = game.players.filter((p) => { return p.name == playername });
+            if(players.length == 0) {
+                return;
+            }
+
+            var player = players[0];
+            
+            $playerItem = $("#lobby #player-list ul").find("[data-player-name=" + player.name + "]");
+            if($playerItem.length == 0) {
+                $playerItem = $("<div/>");
+                $playerItem.attr("data-player-name", p.name);
+                $("#game #player-list").append($playerItem);
+            }
+            
+            var playerNameDisplay;
+            if(p.status == 1) {
+                // connected
+                if(player.currentCard != "") {
+                    // card played
+                    playerNameDisplay = player.name;
+                    $playerItem.css('font-style', '');
+                } else {
+                    // card played
+                    playerNameDisplay = player.name + "(waiting ...)";
+                    $playerItem.css('font-style', 'italic');
+                }
+            } else {
+                // not connected
+                playerNameDisplay = player.name + " (disconnected ...)";
+                $playerItem.css('font-style', 'italic');
+            }
+
+            $playerItem.html(playerNameDisplay);
+
+        };
+
         var displayCurrentCards = () => {
+            $("#game #playing-cards").html("");
+            game.currentCards.forEach((c) => {
+                $card = $("<div/>");
+                $card.html(c);
+                $card.addClass("deck-card");
+                $("#game #playing-cards").append($card);
+            });
+
+            $cardsLeft = $("<div/>");
+            $cardsLeft.html("(" + (game.deck.length) + " cards left)");
+            $("#game #playing-cards").append($cardsLeft);
         }
 
         var displayLobbyPlayer = (playername) => {
@@ -64,7 +251,7 @@
                 $playerItem.css('font-style', '');
             } else {
                 // not connected
-                $playerItem.html(player.name + " (disconnected)");
+                $playerItem.html(player.name + " (disconnected ...)");
                 $playerItem.css('font-style', 'italic');
             }
         }
@@ -97,6 +284,36 @@
                 window.location.href = "/";
             });
         };
+
+        // Card Click
+        var userCardClick = (event) => {
+            var $target = $(event.target);
+
+            if($target.hasClass("selected")){
+                $(".user-card").removeClass("selected");
+                togglePlayedCard($target);
+            } else {
+                $(".user-card").removeClass("selected");
+                $target.addClass("selected");
+            }
+
+        }
+
+        var togglePlayedCard = ($card) => {
+            
+            $("#game #user-played-card").html("");
+
+            var card = $card.attr("data-card-no");
+            
+            var $cardItem = $("<span/>");
+            $cardItem.attr("data-card-no", card);
+            $cardItem.html(card);
+            $cardItem.addClass("played-card");
+            $("#game #user-played-card").append($cardItem);
+            
+
+            displayCards();
+        }
 
         // -------------------------------
         // -------------------------------
@@ -215,7 +432,7 @@
         </div>
         <div id="playing-cards">
         </div>
-        <div id="user-played-cards">
+        <div id="user-played-card">
         </div>
         <div id="user-cards">
         </div>
