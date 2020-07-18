@@ -62,7 +62,6 @@ const socket = (io) => {
                 // set player socket
                 gameBusiness.setPlayerSocket(username, socket);
 
-                //io.sockets.emit('playerJoin', { game : game, data : joinInfos});
                 gameBusiness.sendToAllSocket('playerJoin', { game : game, data : joinInfos});
             } catch(ex) {
                 log(ex);
@@ -85,7 +84,6 @@ const socket = (io) => {
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
 
                 gameBusiness.leaveGame(username);
-                // io.sockets.emit('playerLeave', { game : gameBusiness.game, data : leaveinfos});
                 gameBusiness.sendToAllSocket('playerLeave', { game : gameBusiness.game, data : leaveinfos});
 
                 
@@ -110,7 +108,6 @@ const socket = (io) => {
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
 
                 gameBusiness.disconnectGame(username);
-                // io.sockets.emit('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
                 gameBusiness.sendToAllSocket('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
                 
             } catch(ex) {
@@ -123,6 +120,8 @@ const socket = (io) => {
         socket.on('gameStart', () => {
             try {
 
+
+                event = 'gameStart';
                 log('gameStart');
 
                 if(!gameBusiness) {
@@ -139,8 +138,45 @@ const socket = (io) => {
                     return;
                 }
 
-                // io.sockets.emit('gameStart', gameBusiness.game);
                 gameBusiness.sendToAllSocket('gameStart', gameBusiness.game);
+
+            } catch(ex) {
+                log(ex);
+                socket.emit('error', {error : ex});
+            }
+
+        });
+
+        socket.on('playCard', (card) => {
+            try {
+
+                event = 'playCard';
+                log('playCard');
+
+                if(!gameBusiness) {
+                    sendError('GameBusiness init error');
+                    return;
+                }
+
+                gameBusiness.playerPayCard(username, card);
+
+                gameBusiness.sendToAllSocket('playCard', { game: gameBusiness.game, play: { username: username, card: card } }, username);
+
+                if(gameBusiness.allUserPlayedCard()) {
+
+                    gameBusiness.processTurn();
+
+                    if(gameBusiness.game.deck.length > 0) {
+                        gameBusiness.startNewTurn();
+                    }
+
+                    gameBusiness.sendToAllSocket('turnAllCardsPlayed', gameBusiness.game);
+                    
+                    if(gameBusiness.game.deck.length == 0) {
+                        gameBusiness.calculateWinner();
+                        gameBusiness.sendToAllSocket('gameFinished', gameBusiness.game);
+                    }
+                }
 
             } catch(ex) {
                 log(ex);

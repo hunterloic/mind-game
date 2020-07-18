@@ -9,11 +9,29 @@ class GameBusiness {
         this.game = game;
     }
 
-    sendToAllSocket(event, data) {
+    sendToAllSocket(event, data, exclusion) {
         
         this.game.players.forEach((p) => {
+            if(exclusion) {
+                if(p.name == exclusion) {
+                    return;
+                }
+            }
             p.getSocket().emit(event, data);
         });
+    }
+
+    playerPayCard(username, card) {
+        var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
+        if(playerToUpdate.length == 0) {
+            return;
+        }
+
+        playerToUpdate[0].currentCard = card;
+    }
+
+    allUserPlayedCard = () => {
+        return this.game.players.filter((p) => { return p.currentCard == "" }).length == 0;
     }
 
     getPlayer(username) {
@@ -95,11 +113,11 @@ class GameBusiness {
         playerToUpdate[0].setSocket(socket);
     }
 
-    startGame = () => {
+    startGame() {
         this.game.status = 1;
     }
 
-    startNewTurn = () => {
+    startNewTurn() {
 
         this.error = "";
 
@@ -107,15 +125,76 @@ class GameBusiness {
             this.error = "There is no more card to play";
             return false;
         }
-        if(this.game.currentCards.length != 0) {
-            this.error = "The current turn is not ended";
-            return false;
-        }
 
-        this.game.currentCards = new Array();
         this.game.currentCards.push(this.game.deck.shift());
 
         return true;
+    }
+
+    processTurn() {
+        
+        this.error = "";
+
+        // search winners
+        var winPlayers = new Array();
+        for(var i = 0; i<this.game.players.length; i++) {
+            var player = this.game.players[i];
+            if(winPlayers.length == 0) {
+                winPlayers.push(player);
+            } else {
+                if(player.currentCard > winPlayers[0].currentCard) {
+                    winPlayers = new Array();
+                    winPlayers.push(player);
+                } else if(player.currentCard == winPlayers[0].currentCard) { 
+                    winPlayers.push(player);
+                }
+            }
+        }
+
+        // update player cards
+        this.game.players.forEach((p) => {
+            p.previousCard = p.currentCard;
+            p.cards = p.cards.filter((c) => c != p.currentCard);
+            p.currentCard = "";
+        });
+
+
+        if(winPlayers.length > 1) {
+            // multiple winners, do not reset playing cards
+        } else {
+            // add rewards to player            
+            winPlayers[0].rewards = winPlayers[0].rewards.concat(this.game.currentCards);
+
+            // 1 winner, reset playing cards
+            this.game.currentCards = new Array();
+        }
+
+    }
+
+    calculateWinner() {
+        this.game.players.forEach((p) => {
+            p.points = p.rewards.reduce(function(acc, val) { return acc + val; }, 0);
+        });
+
+        var winners = new Array();
+        var winnerPoints = 0;
+        for(var i = 0; i<this.game.players.length; i++) {
+            var player = this.game.players[i];
+            
+            if(winners.length == 0) {
+                winners.push(player.name);
+                winnerPoints = player.points;
+            } else {
+                if(player.points > winnerPoints) {
+                    winners = new Array();
+                    winners.push(player.name);
+                    winnerPoints = player.points;
+                } else if(player.points == winnerPoints) {
+                    winners.push(player.name);
+                }
+            }
+        }
+        this.game.winners = winners;
     }
 
     restart() {

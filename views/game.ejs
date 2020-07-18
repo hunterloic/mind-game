@@ -14,6 +14,37 @@
             user-select: none; /* Standard */
         }
 
+        #player-list {
+            height:150px;
+        }
+
+        .other-player {
+            display:inline-block;
+            border: 1px solid black;
+            color:black;
+            padding: 15px;
+            margin: 5px;
+
+            font-size: 16px;
+
+            background-color:pink;
+        }
+
+        .other-player-card {
+            width: 30px;
+            height: 30px;
+            padding: 15px;
+            margin: 5px;
+            font-size: 20px;
+            font-weight:normal;
+        }
+
+        .other-player-card.show {
+            border: 1px solid black;
+            color:black;
+            background-color:palegreen;
+        }
+
         #user-played-card {
             height:70px;
         }
@@ -85,6 +116,7 @@
 
         // Screen Layout process
         var displayBoard = () => {
+            $("#lobby").html("");
             $("#lobby").css("display", "none");
             $("#game").css("display", "");
 
@@ -182,15 +214,22 @@
 
             var player = players[0];
             
-            $playerItem = $("#lobby #player-list ul").find("[data-player-name=" + player.name + "]");
+            var $playerItem = $("#game #player-list").find("[data-player-name=" + player.name + "]");
+
             if($playerItem.length == 0) {
                 $playerItem = $("<div/>");
-                $playerItem.attr("data-player-name", p.name);
+                $playerItem.attr("data-player-name", player.name);
+                $playerItem.addClass("other-player");
+
+                $playerCardItem = $("<div/>");
+                $playerCardItem.addClass("other-player-card");
+                $playerCardItem.html("");
+
                 $("#game #player-list").append($playerItem);
             }
             
             var playerNameDisplay;
-            if(p.status == 1) {
+            if(player.status == 1) {
                 // connected
                 if(player.currentCard != "") {
                     // card played
@@ -206,8 +245,20 @@
                 playerNameDisplay = player.name + " (disconnected ...)";
                 $playerItem.css('font-style', 'italic');
             }
-
             $playerItem.html(playerNameDisplay);
+
+            var $playerCardItem = $playerItem.find(".other-player-card");
+            if($playerCardItem.length == 0) {
+                $playerCardItem = $("<div/>");
+                $playerCardItem.addClass("other-player-card");
+                $playerCardItem.html("");
+
+                $playerItem.append($playerCardItem);
+            }
+
+            if(player.currentCard != "") {
+                $playerCardItem.addClass("show");
+            }
 
         };
 
@@ -310,13 +361,33 @@
             $cardItem.html(card);
             $cardItem.addClass("played-card");
             $("#game #user-played-card").append($cardItem);
-            
 
             displayCards();
+            
+            socket.emit('playCard', card);
         }
 
         // -------------------------------
         // -------------------------------
+
+        // play card process
+        var socketPlayCard = (data) => {
+            gameExecuteList.push(() => {
+                game = data.game;
+                displayOtherPlayers();
+            });
+        };
+
+        // play card process
+        var socketTurnAllCardsPlayed = (data) => {
+            gameExecuteList.push(() => {
+                game = data.game;
+                displayOtherPlayers();
+                displayCurrentCards();
+                displayPlayedCard();
+                displayCards();
+            });
+        };
 
         // Start game process
         var socketGameStart = (socketGame) => {
@@ -382,6 +453,8 @@
             socket.on('playerLeave', socketPlayerLeave);
             socket.on('playerDisconnect', socketPlayerDisconnect);
             socket.on('gameStart', socketGameStart);
+            socket.on('playCard', socketPlayCard);
+            socket.on('turnAllCardsPlayed', socketTurnAllCardsPlayed);
 
             // UI events
             $("#btn-start").click(btnStartClick);
@@ -429,6 +502,7 @@
 
     <div id="game">
         <div id="player-list">
+            <div style="font-weight: bold;">Player list :</div>
         </div>
         <div id="playing-cards">
         </div>

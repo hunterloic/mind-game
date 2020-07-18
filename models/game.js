@@ -5,7 +5,9 @@ class Game {
         this.host = host;
         this.winner = 0;
         this.deck = new Array();
+        this.winners = new Array();
         this.currentCards = new Array(); // List currently playing cards
+        this.lock = false;
 
         for(var i = -5; i <= 10; i++) {
             this.deck.push(i);
