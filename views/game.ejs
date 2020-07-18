@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Mind game</title>
+</head>
+<body>
+    <script src="/socket.io/socket.io.js"></script>
+    <script src="/public/js/jquery-3.5.1.min.js"></script>
+
+    <script>
+        var lobbyExecuteList = new Array();
+        var gameHost = '<%=game.host%>';
+        var username = '<%=username%>';
+        var socket;
+
+        var lobbyLoop = setInterval(function(){
+            if(lobbyExecuteList.length > 0) {
+                lobbyExecuteList.shift()();
+            }
+        }, 200)
+
+        $(document).ready(() => {
+            socket = io();
+
+            window.onbeforeunload = function (e) {
+                socket.emit('playerLeave', { gameHost:gameHost, username:username });
+            };
+            
+            lobbyExecuteList.push(() => {
+                socket.emit('playerJoin', { gameHost:gameHost, username:username });
+            });
+            
+            socket.on('playerJoin', (infos) => {
+
+                lobbyExecuteList.push(() => {
+                    var $li = $("<li/>");
+                    $li.attr("data-player-name", infos.username);
+                    $li.html(infos.username);
+
+                    $("#player-list>ul").append($li);
+                });
+            });
+
+            socket.on('playerLeave', (infos) => {
+                lobbyExecuteList.push(() => {
+                    $("#player-list>ul").find("[data-player-name=" + infos.username + "]").remove();
+                });
+            });
+        });
+
+
+    </script>
+
+    <div id="lobby">
+        <div>welcome to the game of <%=game.host %> !</div>
+        <div>Waiting for the host to start the game ...</div>
+        <div>List of players in the game</div>
+        <div id="player-list">
+            <ul>
+                <% var i =1; %>
+                <% game.players.forEach((p) => { %>
+                    <li data-player-name="<%=p.name %>">
+                        <%=p.name %>
+                    </li>
+                    <% i++; %>
+                <% }); %>
+            </ul>
+        </div>
+        
+    </div>
+
+
+
+
+
+</body>

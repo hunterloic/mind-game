@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>Mind game</title>
+    <style>
+        body {
+            margin:0;
+            height: 100vh;
+        }
+
+        #game-list table {
+            border-collapse: collapse;
+        }
+
+        #game-list th,
+        #game-list td {
+            border: 1px solid black;
+            padding: 2px;
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+    
+    <script src="/public/js/jquery-3.5.1.min.js"></script>
+
+    <script>
+        var userName = '<%=username %>';
+
+        /*
+        var setUserName = () => {
+            while(userName == "") {
+                userName = prompt("Enter your name");
+            }
+            
+            $.post(
+                '/login', 
+                { userName }, 
+                (data) => {
+
+                }
+            ).fail(() => {
+                alert("Error when setting user name");
+                userName = "";
+                setUserName();
+            });
+        }
+*/
+        function joinGame_click() {
+            alert($(this).attr("data-host"));
+        }
+
+        $(document).ready(() => {
+            $("[name='join-game']").click(joinGame_click);
+
+        });
+    </script>
+    <div id="container">
+        <div id="welcome">
+            Welcome <%=username %> !
+        </div>
+        <div id="select-game-message">
+            Please select a game or create a new one :
+        </div>
+        <div id="game-list">
+            <% if(games.length > 0){ %>
+                <table>
+                    <tr>
+                        <th>
+                            Host
+                        </th>
+                        <th>
+                            Players
+                        </th>
+                        <th>
+                        </th>
+                    </tr>
+                    <% games.forEach(function(game) { %>
+                        <tr>
+                            <td>
+                                <%= game.host %>
+                            </td>
+                            <td>
+                                <%= game.players.length %>/<%= config.PlayerCountPerGameMax %>
+                            </td>
+                            <td>
+                                <form action="/game" method="GET">
+                                    <input type="submit" value="Join" />
+                                    <input type="hidden" value="<%= game.host %>" name="host"></input>
+                                </form>
+                            </td>
+                        </tr>
+                    <% }); %>
+                </table>
+            <% } else{ %>  
+                There is no game.
+            <% } %>
+        </div>
+        <div id="create-game">
+            <form action="/game" method="POST">
+                <input type="submit" value="Create a new game"></input>
+            </form>
+        </div>
+    </div>
+
+
+</body>
