@@ -9,6 +9,13 @@ class GameBusiness {
         this.game = game;
     }
 
+    sendToAllSocket(event, data) {
+        
+        this.game.players.forEach((p) => {
+            p.getSocket().emit(event, data);
+        });
+    }
+
     getPlayer(username) {
         if(!this.game.players == this.game) {
             return;
@@ -77,6 +84,15 @@ class GameBusiness {
         // already in the game
         var playerNames = this.game.players.map((p) => { return p.name});
         return playerNames.includes(username);
+    }
+
+    setPlayerSocket = (username, socket) => {
+        var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
+        if(playerToUpdate.length == 0) {
+            return;
+        }
+
+        playerToUpdate[0].setSocket(socket);
     }
 
     startGame = () => {

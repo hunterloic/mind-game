@@ -48,25 +48,32 @@ const socket = (io) => {
 
                 // check if the game is not started
                 if(gameBusiness.game.status != 0 && 
-                    !gameBusiness.isAlreadyInGame(joinInfos.username)) {
+                    !gameBusiness.isAlreadyInGame(username)) {
                     sendError('game already started');
                     return;
                 }
 
                 // check if already in game
-                if(gameBusiness.isAlreadyInGame(joinInfos.username)) {
+                if(gameBusiness.isAlreadyInGame(username)) {
                     log('already in game');
-                    io.sockets.emit('playerJoin', { game : game, data : joinInfos});
+
+                    gameBusiness.setPlayerSocket(username, socket);
+                    //io.sockets.emit('playerJoin', { game : game, data : joinInfos});
+                    gameBusiness.sendToAllSocket('playerJoin', { game : game, data : joinInfos});
+
                     return;
                 }
 
                 // join game and check error
-                if(!gameBusiness.joinGame(joinInfos.username)) {
+                if(!gameBusiness.joinGame(username)) {
                     sendError(gameBusiness.error);
                     return;
                 }
+                
+                gameBusiness.setPlayerSocket(username, socket);
 
-                io.sockets.emit('playerJoin', { game : game, data : joinInfos});
+                //io.sockets.emit('playerJoin', { game : game, data : joinInfos});
+                gameBusiness.sendToAllSocket('playerJoin', { game : game, data : joinInfos});
             } catch(ex) {
                 log(ex);
                 socket.emit('err', {error : ex});
@@ -88,7 +95,8 @@ const socket = (io) => {
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
 
                 gameBusiness.leaveGame(username);
-                io.sockets.emit('playerLeave', { game : gameBusiness.game, data : leaveinfos});
+                // io.sockets.emit('playerLeave', { game : gameBusiness.game, data : leaveinfos});
+                gameBusiness.sendToAllSocket('playerLeave', { game : gameBusiness.game, data : leaveinfos});
 
                 
             } catch(ex) {
@@ -112,7 +120,8 @@ const socket = (io) => {
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
 
                 gameBusiness.disconnectGame(username);
-                io.sockets.emit('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
+                // io.sockets.emit('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
+                gameBusiness.sendToAllSocket('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
                 
             } catch(ex) {
                 log(ex);
@@ -140,9 +149,8 @@ const socket = (io) => {
                     return;
                 }
 
-
-
-                io.sockets.emit('gameStart', gameBusiness.game);
+                // io.sockets.emit('gameStart', gameBusiness.game);
+                gameBusiness.sendToAllSocket('gameStart', gameBusiness.game);
 
             } catch(ex) {
                 log(ex);

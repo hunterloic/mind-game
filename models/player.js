@@ -1,4 +1,7 @@
 class Player {
+
+    #socket;
+
     constructor(name) {
       this.name = name;
       this.cards = new Array();
@@ -18,6 +21,14 @@ class Player {
         }
         this.rewards = new Array();
         this.currentCard = "";
+    }
+
+    setSocket(socket) {
+        this.#socket = socket;
+    }
+
+    getSocket() {
+        return this.#socket;
     }
 }
 
