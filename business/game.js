@@ -64,6 +64,29 @@ class GameBusiness {
         return playerNames.includes(username);
     }
 
+    startGame = () => {
+        this.game.status = 1;
+    }
+
+    startNewTurn = () => {
+
+        this.error = "";
+
+        if(this.game.deck.length == 0) {
+            this.error = "There is no more card to play";
+            return false;
+        }
+        if(this.game.currentCards.length != 0) {
+            this.error = "The current turn is not ended";
+            return false;
+        }
+
+        this.game.currentCards = new Array();
+        this.game.currentCards.push(this.game.deck.shift());
+
+        return true;
+    }
+
     restart() {
         this.game.deck = new Array();
         

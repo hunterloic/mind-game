@@ -9,15 +9,14 @@ const socket = (io) => {
     io.on('connection', (socket) => {
         console.log('a user connected');
 
-
         var gameBusiness;
         var username;
         var event;
             
         const sendError = (message) => {
             var messageFormatted = event + ' : ' + username + ' : ' + (gameBusiness ? (gameBusiness.game  ? gameBusiness.game.host : '') : '') + ' : ' + message;
-            console.log(event + ' : ' + message);
-            socket.emit('err', {error : event + ' : ' + message});
+            console.log(messageFormatted);
+            socket.emit('err', {error : messageFormatted});
         }
     
         socket.on('playerJoin', (joinInfos) => {
@@ -60,7 +59,7 @@ const socket = (io) => {
                     return;
                 }
 
-                io.sockets.emit('playerJoin', joinInfos);
+                io.sockets.emit('playerJoin', { game : game, data : joinInfos});
             } catch(ex) {
                 console.log(ex);
                 socket.emit('err', {error : ex});
@@ -68,7 +67,7 @@ const socket = (io) => {
 
         });
 
-        socket.on('playerLeave', (leaveInfos) => {
+        socket.on('playerLeave', () => {
             try {
 
                 if(!gameBusiness) {
@@ -78,8 +77,32 @@ const socket = (io) => {
 
                 gameBusiness.leaveGame(username);
 
-                io.sockets.emit('playerLeave', { gameHost : gameBusiness.game.host, username : username});
+                var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
+                io.sockets.emit('playerLeave', { game : gameBusiness.game, data : leaveinfos});
                 
+            } catch(ex) {
+                console.log(ex);
+                socket.emit('error', {error : ex});
+            }
+
+        });
+
+        socket.on('gameStart', () => {
+            try {
+
+                if(!gameBusiness) {
+                    sendError('GameBusiness init error');
+                    return;
+                }
+
+                gameBusiness.startGame();
+                if(!gameBusiness.startNewTurn()) {
+                    sendError(gameBusiness.error);
+                    return;
+                }
+
+                io.sockets.emit('gameStart', gameBusiness.game);
+
             } catch(ex) {
                 console.log(ex);
                 socket.emit('error', {error : ex});

@@ -11,23 +11,62 @@
     <script src="/public/js/jquery-3.5.1.min.js"></script>
 
     <script>
-        var lobbyExecuteList = new Array();
+        var gameExecuteList = new Array();
         var gameHost = '<%=game.host%>';
         var username = '<%=username%>';
         var socket;
+        var game;
 
         // lobby loop
         var lobbyLoop = setInterval(function(){
-            if(lobbyExecuteList.length > 0) {
-                lobbyExecuteList.shift()();
+            if(gameExecuteList.length > 0) {
+                gameExecuteList.shift()();
             }
         }, 200)
 
+        // Start button process
         var btnStartClick = () => {
-            lobbyExecuteList.push(() => {
-                socket.emit('startGame');
+            gameExecuteList.push(() => {
+                socket.emit('gameStart');
             });
         };
+
+        // Start game process
+        var socketGameStart = (socketGame) => {
+            gameExecuteList.push(() => {
+                game = socketGame;
+                $("#lobby").css("display", "none");
+            });
+        };
+
+        // Player join process
+        var socketPlayerJoin = (infos) => {
+            gameExecuteList.push(() => {
+                game = infos.game;
+                var $li = $("<li/>");
+                $li.attr("data-player-name", infos.data.username);
+                $li.html(infos.data.username);
+
+                $("#player-list>ul").append($li);
+            });
+        };
+
+        // Player leave process
+        var socketPlayerLeave = (infos) => {
+            gameExecuteList.push(() => {
+                game = infos.game;
+                $("#player-list>ul").find("[data-player-name=" + infos.data.username + "]").remove();
+            });
+        };
+
+        // Error process
+        var socketError = (data) => {
+            gameExecuteList.push(() => {
+                clearInterval(lobbyLoop);
+                alert(JSON.stringify(data));
+                window.location.href = "/";
+            });
+        }
 
         $(document).ready(() => {
             socket = io();
@@ -37,34 +76,16 @@
                 socket.emit('playerLeave');
             };
             
-            lobbyExecuteList.push(() => {
+            // Joinning game
+            gameExecuteList.push(() => {
                 socket.emit('playerJoin', { gameHost:gameHost, username:username });
             });
             
             // Socket events
-            socket.on('err', (data) => {
-                lobbyExecuteList.push(() => {
-                    clearInterval(lobbyLoop);
-                    alert(JSON.stringify(data));
-                    window.location.href = "/";
-                });
-            });
-
-            socket.on('playerJoin', (infos) => {
-                lobbyExecuteList.push(() => {
-                    var $li = $("<li/>");
-                    $li.attr("data-player-name", infos.username);
-                    $li.html(infos.username);
-
-                    $("#player-list>ul").append($li);
-                });
-            });
-
-            socket.on('playerLeave', (infos) => {
-                lobbyExecuteList.push(() => {
-                    $("#player-list>ul").find("[data-player-name=" + infos.username + "]").remove();
-                });
-            });
+            socket.on('err', socketError);
+            socket.on('playerJoin', socketPlayerJoin);
+            socket.on('playerLeave', socketPlayerLeave);
+            socket.on('gameStart', socketGameStart);
 
             // UI events
             $("#btn-start").click(btnStartClick);
