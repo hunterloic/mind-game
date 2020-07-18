@@ -27,6 +27,13 @@ class GameBusiness {
         }
     }
 
+    setPlayerStatus(username, status) {
+        var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
+        if(playerToUpdate.length == 0) {
+            return;
+        }
+    }
+
     joinGame(username) {
         if(!this.game.players == this.game) {
             return;

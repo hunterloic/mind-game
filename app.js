@@ -82,6 +82,10 @@ app.get('/game', (req, res, next) => {
     try {
         var game = SiteBusiness.getGame(req.query.host);
     
+        if(!game) {
+            res.redirect('/');
+        }
+
         res.render(
             'game', 
             {

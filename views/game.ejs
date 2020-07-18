@@ -35,9 +35,29 @@
         var socketGameStart = (socketGame) => {
             gameExecuteList.push(() => {
                 game = socketGame;
-                $("#lobby").css("display", "none");
+                displayBoard();
             });
         };
+
+        var displayBoard = () => {
+            $("#lobby").css("display", "none");
+            $("#game").css("display", "");
+
+            displayOtherPlayers();
+            displayCurrentCards();
+        };
+
+        var displayOtherPlayers = () => {
+            game.players.filter((p) => { return p.name != username }).forEach(p => {
+                $player = $("div");
+                $player.html(p.name);
+                $("#game #player-list").append($player);
+            });
+        };
+
+        var displayCurrentCards = () => {
+
+        }
 
         // Player join process
         var socketPlayerJoin = (infos) => {
@@ -47,7 +67,7 @@
                 $li.attr("data-player-name", infos.data.username);
                 $li.html(infos.data.username);
 
-                $("#player-list>ul").append($li);
+                $("#lobby #player-list ul").append($li);
             });
         };
 
@@ -55,7 +75,7 @@
         var socketPlayerLeave = (infos) => {
             gameExecuteList.push(() => {
                 game = infos.game;
-                $("#player-list>ul").find("[data-player-name=" + infos.data.username + "]").remove();
+                $("#lobby #player-list ul").find("[data-player-name=" + infos.data.username + "]").remove();
             });
         };
 
@@ -69,17 +89,17 @@
         }
 
         $(document).ready(() => {
+
+            // Init socket
             socket = io();
 
-            // User events
+            // Init game variable
+            game = JSON.parse('<%- JSON.stringify(game) %>');
+
+            // Window events
             window.onbeforeunload = function (e) {
                 socket.emit('playerLeave');
             };
-            
-            // Joinning game
-            gameExecuteList.push(() => {
-                socket.emit('playerJoin', { gameHost:gameHost, username:username });
-            });
             
             // Socket events
             socket.on('err', socketError);
@@ -89,6 +109,16 @@
 
             // UI events
             $("#btn-start").click(btnStartClick);
+
+            if(game.status == 1) {
+                // If game is started, display game
+                gameExecuteList.push(displayBoard);
+            } else {
+                // If game is not started, send join event
+                gameExecuteList.push(() => {
+                    socket.emit('playerJoin', { gameHost:gameHost, username:username });
+                });
+            }
         });
 
 
@@ -115,6 +145,17 @@
             </ul>
         </div>
         
+    </div>
+
+    <div id="game">
+        <div id="player-list">
+        </div>
+        <div id="playing-cards">
+        </div>
+        <div id="user-played-cards">
+        </div>
+        <div id="user-cards">
+        </div>
     </div>
 
 

@@ -7,26 +7,32 @@ const SiteBusiness = require('./business/site');
 const socket = (io) => {
 
     io.on('connection', (socket) => {
-        console.log('a user connected');
 
         var gameBusiness;
-        var username;
-        var event;
+        var username = "";
+        var event = "connection";
             
         const sendError = (message) => {
             var messageFormatted = event + ' : ' + username + ' : ' + (gameBusiness ? (gameBusiness.game  ? gameBusiness.game.host : '') : '') + ' : ' + message;
             console.log(messageFormatted);
             socket.emit('err', {error : messageFormatted});
         }
+            
+        const log = (message) => {
+            var messageFormatted = event + ' : ' + username + ' : ' + (gameBusiness ? (gameBusiness.game  ? gameBusiness.game.host : '') : '') + ' : ' + message;
+            console.log(messageFormatted);
+        }
+
+        log('a user connected');
     
         socket.on('playerJoin', (joinInfos) => {
 
             try {
 
+                log('player join');
+
                 event = 'playerJoin';
                 username = joinInfos.username;
-
-                console.log('player join');
                 
                 var game = SiteBusiness.getGame(joinInfos.gameHost);
                 if(!game) {
@@ -49,7 +55,7 @@ const socket = (io) => {
 
                 // check if already in game
                 if(gameBusiness.isAlreadyInGame(joinInfos.username)) {
-                    console.log('already in game');
+                    log('already in game');
                     return;
                 }
 
@@ -61,7 +67,7 @@ const socket = (io) => {
 
                 io.sockets.emit('playerJoin', { game : game, data : joinInfos});
             } catch(ex) {
-                console.log(ex);
+                log(ex);
                 socket.emit('err', {error : ex});
             }
 
@@ -70,18 +76,44 @@ const socket = (io) => {
         socket.on('playerLeave', () => {
             try {
 
+                log('player leave');
+
                 if(!gameBusiness) {
                     sendError('GameBusiness init error');
                     return;
                 }
 
-                gameBusiness.leaveGame(username);
-
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
+
+                gameBusiness.leaveGame(username);
                 io.sockets.emit('playerLeave', { game : gameBusiness.game, data : leaveinfos});
+
                 
             } catch(ex) {
-                console.log(ex);
+                log(ex);
+                socket.emit('error', {error : ex});
+            }
+
+        });
+
+        socket.on('playerDisconnect', () => {
+            try {
+
+                log('player disconnect');
+
+                if(!gameBusiness) {
+                    sendError('GameBusiness init error');
+                    return;
+                }
+
+                var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
+
+                gameBusiness.setPlayerStatus(username);
+                io.sockets.emit('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
+
+                
+            } catch(ex) {
+                log(ex);
                 socket.emit('error', {error : ex});
             }
 
@@ -90,21 +122,28 @@ const socket = (io) => {
         socket.on('gameStart', () => {
             try {
 
+                log('gameStart');
+
                 if(!gameBusiness) {
                     sendError('GameBusiness init error');
                     return;
                 }
 
+                // Start Game
                 gameBusiness.startGame();
+
+                // Set new turn
                 if(!gameBusiness.startNewTurn()) {
                     sendError(gameBusiness.error);
                     return;
                 }
 
+
+
                 io.sockets.emit('gameStart', gameBusiness.game);
 
             } catch(ex) {
-                console.log(ex);
+                log(ex);
                 socket.emit('error', {error : ex});
             }
 
