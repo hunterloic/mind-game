@@ -53,23 +53,13 @@ const socket = (io) => {
                     return;
                 }
 
-                // check if already in game
-                if(gameBusiness.isAlreadyInGame(username)) {
-                    log('already in game');
-
-                    gameBusiness.setPlayerSocket(username, socket);
-                    //io.sockets.emit('playerJoin', { game : game, data : joinInfos});
-                    gameBusiness.sendToAllSocket('playerJoin', { game : game, data : joinInfos});
-
-                    return;
-                }
-
                 // join game and check error
                 if(!gameBusiness.joinGame(username)) {
                     sendError(gameBusiness.error);
                     return;
                 }
-                
+
+                // set player socket
                 gameBusiness.setPlayerSocket(username, socket);
 
                 //io.sockets.emit('playerJoin', { game : game, data : joinInfos});

@@ -17,37 +17,8 @@
         var socket;
         var game;
 
-        // lobby loop
-        var lobbyLoop = setInterval(function(){
-            if(gameExecuteList.length > 0) {
-                gameExecuteList.shift()();
-            }
-        }, 200)
 
-        // Start button process
-        var btnStartClick = () => {
-            gameExecuteList.push(() => {
-                socket.emit('gameStart');
-            });
-        };
-
-        // Leave button process
-        var btnLeaveClick = () => {
-            gameExecuteList.push(() => {
-                clearInterval(lobbyLoop);
-                socket.emit('playerLeave');
-                window.location.href = "/";
-            });
-        };
-
-        // Start game process
-        var socketGameStart = (socketGame) => {
-            gameExecuteList.push(() => {
-                game = socketGame;
-                displayBoard();
-            });
-        };
-
+        // Scree Layout process
         var displayBoard = () => {
             $("#lobby").css("display", "none");
             $("#game").css("display", "");
@@ -67,24 +38,90 @@
         var displayCurrentCards = () => {
         }
 
+        var displayLobbyPlayer = (playername) => {
+
+            if(!game) {
+                return;
+            }
+
+            var players = game.players.filter((p) => { return p.name == playername });
+            if(players.length == 0) {
+                return;
+            }
+
+            var player = players[0];
+
+            $playerItem = $("#lobby #player-list ul").find("[data-player-name=" + player.name + "]");
+            if($playerItem.length == 0) {
+                $playerItem = $("<li/>");
+                $playerItem.attr("data-player-name", player.name);
+                $("#lobby #player-list ul").append($playerItem);
+            }
+            
+            if(player.status == 1) {
+                // connected
+                $playerItem.html(player.name);
+                $playerItem.css('font-style', '');
+            } else {
+                // not connected
+                $playerItem.html(player.name + " (disconnected)");
+                $playerItem.css('font-style', 'italic');
+            }
+        }
+
+        // -------------------------------
+        // -------------------------------
+
+        // lobby loop
+        var lobbyLoop = setInterval(function(){
+            if(gameExecuteList.length > 0) {
+                gameExecuteList.shift()();
+            }
+        }, 200);
+
+        // -------------------------------
+        // -------------------------------
+
+        // Start button process
+        var btnStartClick = () => {
+            gameExecuteList.push(() => {
+                socket.emit('gameStart');
+            });
+        };
+
+        // Leave button process
+        var btnLeaveClick = () => {
+            gameExecuteList.push(() => {
+                clearInterval(lobbyLoop);
+                socket.emit('playerLeave');
+                window.location.href = "/";
+            });
+        };
+
+        // -------------------------------
+        // -------------------------------
+
+        // Start game process
+        var socketGameStart = (socketGame) => {
+            gameExecuteList.push(() => {
+                game = socketGame;
+                displayBoard();
+            });
+        };
+
         // Player join process
         var socketPlayerJoin = (infos) => {
-            alert("join!!");
             gameExecuteList.push(() => {
                 game = infos.game;
+                displayLobbyPlayer(infos.data.username);
+            });
+        };
 
-                $playerItem = $("#lobby #player-list ul").find("[data-player-name=" + infos.data.username + "]");
-
-                if($playerItem.length == 0) {
-                    $playerItem = $("<li/>");
-                    $playerItem.attr("data-player-name", infos.data.username);
-                    $playerItem.html(infos.data.username);
-                    $("#lobby #player-list ul").append($playerItem);
-                } else {
-                    $playerItem.html(infos.data.username);
-                    $playerItem.css('font-style', '');
-                }
-
+        // Player diconnect process
+        var socketPlayerDisconnect = (infos) => {
+            gameExecuteList.push(() => {
+                game = infos.game;
+                displayLobbyPlayer(infos.data.username);
             });
         };
 
@@ -96,16 +133,6 @@
             });
         };
 
-        // Player diconnect process
-        var socketPlayerDisconnect = (infos) => {
-            gameExecuteList.push(() => {
-                game = infos.game;
-                $playerItem = $("#lobby #player-list ul").find("[data-player-name=" + infos.data.username + "]");
-                $playerItem.html(infos.data.username + "(disconnected)");
-                $playerItem.css('font-style', 'italic');
-            });
-        };
-
         // Error process
         var socketError = (data) => {
             gameExecuteList.push(() => {
@@ -114,6 +141,9 @@
                 window.location.href = "/game?host=" + game.host;
             });
         }
+
+        // -------------------------------
+        // -------------------------------
 
         $(document).ready(() => {
 
