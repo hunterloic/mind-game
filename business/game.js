@@ -30,7 +30,7 @@ class GameBusiness {
         playerToUpdate[0].currentCard = card;
     }
 
-    allUserPlayedCard = () => {
+    allUserPlayedCard() {
         return this.game.players.filter((p) => { return p.currentCard == "" }).length == 0;
     }
 
@@ -104,7 +104,7 @@ class GameBusiness {
         return playerNames.includes(username);
     }
 
-    setPlayerSocket = (username, socket) => {
+    setPlayerSocket(username, socket) {
         var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
         if(playerToUpdate.length == 0) {
             return;
