@@ -23,23 +23,35 @@ class GameBusiness {
         this.game.players = this.game.players.filter((p) => { return p.name != username });
 
         if(this.game.players.length == 0) {
-            SiteBusiness.removeGame(this.game.host)
+            SiteBusiness.removeGame(this.game.host);
         }
     }
 
-    setPlayerStatus(username, status) {
+    disconnectGame(username) {
         var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
         if(playerToUpdate.length == 0) {
             return;
         }
+
+        playerToUpdate[0].status = 0;
+        
+        var connetedPlayers = this.game.players.filter((p) => { return p.status == 1 });
+
+        if(connetedPlayers.length == 0) {
+            SiteBusiness.removeGame(this.game.host);
+        }
     }
 
     joinGame(username) {
-        if(!this.game.players == this.game) {
-            return;
-        }
 
         this.error = "";
+
+        // if already in game, update status
+        if(this.isAlreadyInGame(username)) {
+            var playerToUpdate = this.game.players.filter((p) => { return p.name == username });
+            playerToUpdate[0].status = 1;
+            return true;
+        }
 
         // not started
         if(this.game.status != 0) {
@@ -53,11 +65,7 @@ class GameBusiness {
             return false;
         }
 
-        if(this.isAlreadyInGame(username)) {
-            return true;
-        }
-
-        // Add player to the 
+        // Add player to the game
         var player = new PlayerModel(username);
         this.game.players.push(player);
 

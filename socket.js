@@ -29,10 +29,10 @@ const socket = (io) => {
 
             try {
 
-                log('player join');
-
                 event = 'playerJoin';
                 username = joinInfos.username;
+                log('player join');
+
                 
                 var game = SiteBusiness.getGame(joinInfos.gameHost);
                 if(!game) {
@@ -45,10 +45,10 @@ const socket = (io) => {
                     sendError('GameBusiness init error');
                     return;
                 }
-    
 
                 // check if the game is not started
-                if(gameBusiness.game.status != 0) {
+                if(gameBusiness.game.status != 0 && 
+                    !gameBusiness.isAlreadyInGame(joinInfos.username)) {
                     sendError('game already started');
                     return;
                 }
@@ -56,6 +56,7 @@ const socket = (io) => {
                 // check if already in game
                 if(gameBusiness.isAlreadyInGame(joinInfos.username)) {
                     log('already in game');
+                    io.sockets.emit('playerJoin', { game : game, data : joinInfos});
                     return;
                 }
 
@@ -76,6 +77,7 @@ const socket = (io) => {
         socket.on('playerLeave', () => {
             try {
 
+                event = 'playerLeave';
                 log('player leave');
 
                 if(!gameBusiness) {
@@ -99,6 +101,7 @@ const socket = (io) => {
         socket.on('playerDisconnect', () => {
             try {
 
+                event = 'playerDisconnect';
                 log('player disconnect');
 
                 if(!gameBusiness) {
@@ -108,9 +111,8 @@ const socket = (io) => {
 
                 var leaveinfos = { gameHost : gameBusiness.game.host, username : username};
 
-                gameBusiness.setPlayerStatus(username);
+                gameBusiness.disconnectGame(username);
                 io.sockets.emit('playerDisconnect', { game : gameBusiness.game, data : leaveinfos});
-
                 
             } catch(ex) {
                 log(ex);
