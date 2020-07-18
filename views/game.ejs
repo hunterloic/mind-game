@@ -14,8 +14,12 @@
             user-select: none; /* Standard */
         }
 
+        #game {
+            display: none;
+        }
+
         #player-list {
-            height:150px;
+            height:170px;
         }
 
         .other-player {
@@ -42,7 +46,15 @@
         .other-player-card.show {
             border: 1px solid black;
             color:black;
+            background-color:sandybrown;
+        }
+
+        .other-player-card.show.unknown {
             background-color:palegreen;
+        }
+
+        .other-player-card.show.unknown::after {
+            content: "?";
         }
 
         #user-played-card {
@@ -72,7 +84,7 @@
             
             font-size: 20px;
             
-            background-color:palegreen;
+            background-color:sandybrown;
 
             color:red;
             border: 2px solid red;
@@ -112,23 +124,30 @@
         var username = '<%=username%>';
         var socket;
         var game;
+        var gameLock = false;
 
 
         // Screen Layout process
         var displayBoard = () => {
             $("#lobby").html("");
             $("#lobby").css("display", "none");
-            $("#game").css("display", "");
+
+            $("#game").css("display", "block");
 
             displayOtherPlayers();
             displayCurrentCards();
-            displayPlayedCard();
+            displayUserPoints();
             displayCards();
 
         }
 
-        var displayPlayedCard = () => {
-            
+        var displayUserPoints = () => {
+            var playerArr = game.players.filter((p) => { return p.name == username; });
+            if(playerArr.length == 0) {
+                return;
+            }
+
+            $("#game #user-points").html(playerArr[0].points);
         }
 
         var displayCards = () => {
@@ -214,20 +233,17 @@
 
             var player = players[0];
             
+            // get element
             var $playerItem = $("#game #player-list").find("[data-player-name=" + player.name + "]");
-
             if($playerItem.length == 0) {
                 $playerItem = $("<div/>");
                 $playerItem.attr("data-player-name", player.name);
                 $playerItem.addClass("other-player");
 
-                $playerCardItem = $("<div/>");
-                $playerCardItem.addClass("other-player-card");
-                $playerCardItem.html("");
-
                 $("#game #player-list").append($playerItem);
             }
-            
+
+            // set name
             var playerNameDisplay;
             if(player.status == 1) {
                 // connected
@@ -237,14 +253,17 @@
                     $playerItem.css('font-style', '');
                 } else {
                     // card played
-                    playerNameDisplay = player.name + "(waiting ...)";
+                    playerNameDisplay = player.name + "<BR>(choosing card ...)";
                     $playerItem.css('font-style', 'italic');
                 }
             } else {
                 // not connected
-                playerNameDisplay = player.name + " (disconnected ...)";
+                playerNameDisplay = player.name + "<BR>(disconnected ...)";
                 $playerItem.css('font-style', 'italic');
             }
+
+            // add points
+            playerNameDisplay = playerNameDisplay + "<BR>Points:<span class='other-player-points'>" + player.points + "</span>";
             $playerItem.html(playerNameDisplay);
 
             var $playerCardItem = $playerItem.find(".other-player-card");
@@ -258,6 +277,7 @@
 
             if(player.currentCard != "") {
                 $playerCardItem.addClass("show");
+                $playerCardItem.addClass("unknown");
             }
 
         };
@@ -272,7 +292,7 @@
             });
 
             $cardsLeft = $("<div/>");
-            $cardsLeft.html("(" + (game.deck.length) + " cards left)");
+            $cardsLeft.html("(" + (game.deck.length + 1) + " cards left)");
             $("#game #playing-cards").append($cardsLeft);
         }
 
@@ -310,18 +330,26 @@
         // -------------------------------
         // -------------------------------
 
-        // lobby loop
-        var lobbyLoop = setInterval(function(){
-            if(gameExecuteList.length > 0) {
-                gameExecuteList.shift()();
-            }
-        }, 200);
+        // game loop
+        var gameExecutionLoop;
+        var setGameExecutionLoop = () => {
+            gameExecutionLoop = setInterval(function(){
+                if(gameExecuteList.length > 0) {
+                    gameExecuteList.shift()();
+                }
+            }, 200);
+        }
+        setGameExecutionLoop();
 
         // -------------------------------
         // -------------------------------
 
         // Start button process
         var btnStartClick = () => {
+            if(gameLock) {
+                return;
+            }
+
             gameExecuteList.push(() => {
                 socket.emit('gameStart');
             });
@@ -329,8 +357,12 @@
 
         // Leave button process
         var btnLeaveClick = () => {
+            if(gameLock) {
+                return;
+            }
+            
             gameExecuteList.push(() => {
-                clearInterval(lobbyLoop);
+                clearInterval(gameExecutionLoop);
                 socket.emit('playerLeave');
                 window.location.href = "/";
             });
@@ -338,16 +370,21 @@
 
         // Card Click
         var userCardClick = (event) => {
-            var $target = $(event.target);
-
-            if($target.hasClass("selected")){
-                $(".user-card").removeClass("selected");
-                togglePlayedCard($target);
-            } else {
-                $(".user-card").removeClass("selected");
-                $target.addClass("selected");
+            if(gameLock) {
+                return;
             }
+            
+            gameExecuteList.push(() => {
+                var $target = $(event.target);
 
+                if($target.hasClass("selected")){
+                    $(".user-card").removeClass("selected");
+                    togglePlayedCard($target);
+                } else {
+                    $(".user-card").removeClass("selected");
+                    $target.addClass("selected");
+                }
+            });
         }
 
         var togglePlayedCard = ($card) => {
@@ -381,13 +418,58 @@
         // play card process
         var socketTurnAllCardsPlayed = (data) => {
             gameExecuteList.push(() => {
-                game = data.game;
-                displayOtherPlayers();
-                displayCurrentCards();
-                displayPlayedCard();
-                displayCards();
+                game = data;
+                displayOtherPlayersCard();
+                
+                // gameLock = true;
+                // clearInterval(gameExecutionLoop);
+                setTimeout(()=> {
+                    // gameLock = false;
+                    // setGameExecutionLoop();
+                    // resetOtherPlayersCard();
+                    displayOtherPlayers();
+                    displayCurrentCards();
+                    displayUserPoints();
+                    clearPlayedCard();
+                    
+                }, 2500);
+
             });
         };
+
+        var clearPlayedCard = () => {
+            $("#user-played-card").html("");
+        }
+
+        // 
+        // var resetOtherPlayersCard = () => {
+        //     gameExecuteList.push(() => {
+        //         game.players.filter((p) => { return p.name != username }).forEach((p) => {
+        //             var $card = getOtherPlayerCardEle(p.name);;
+        //             $card.removeClass("show");
+        //             $card.html(p.previousCard);
+        //         });
+        //     });
+        // }
+
+        // 
+        var displayOtherPlayersCard = () => {
+            gameExecuteList.push(() => {
+                game.players.filter((p) => { return p.name != username }).forEach((p) => {
+                    var $card = getOtherPlayerCardEle(p.name);;
+                    $card.removeClass("unknown");
+                    $card.html(p.previousCard);
+                });
+            });
+        }
+
+        var getOtherPlayerCardEle = (playerName) => {
+            var $cards = $("#game #player-list").find("[data-player-name='" + playerName + "']").find(".other-player-card");
+            if($cards.length == 0) {
+                return undefined;
+            }
+            return $($cards[0]);
+        }
 
         // Start game process
         var socketGameStart = (socketGame) => {
@@ -424,7 +506,7 @@
         // Error process
         var socketError = (data) => {
             gameExecuteList.push(() => {
-                clearInterval(lobbyLoop);
+                clearInterval(gameExecutionLoop);
                 alert(JSON.stringify(data));
                 window.location.href = "/game?host=" + game.host;
             });
@@ -443,7 +525,7 @@
 
             // Window events
             window.onbeforeunload = function (e) {
-                clearInterval(lobbyLoop);
+                clearInterval(gameExecutionLoop);
                 socket.emit('playerDisconnect');
             };
             
@@ -501,11 +583,21 @@
     </div>
 
     <div id="game">
+        <div style="font-weight: bold;">Player list :</div>
         <div id="player-list">
-            <div style="font-weight: bold;">Player list :</div>
         </div>
+
+        <hr/>
+
+        <div style="font-weight: bold;">Current card :</div>
         <div id="playing-cards">
         </div>
+
+        <hr/>
+
+        <div style="font-weight: bold;">Your cards :</div>
+        <div style="font-weight: bold;">Your points :<span id="user-points"></span></div>
+
         <div id="user-played-card">
         </div>
         <div id="user-cards">

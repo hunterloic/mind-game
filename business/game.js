@@ -135,6 +135,11 @@ class GameBusiness {
         
         this.error = "";
 
+        var pointSum = 0;
+        for(var i = 0; i< this.game.currentCards.length; i++) {
+            pointSum += this.game.currentCards[i];   
+        }
+
         // search winners
         var winPlayers = new Array();
         for(var i = 0; i<this.game.players.length; i++) {
@@ -142,11 +147,20 @@ class GameBusiness {
             if(winPlayers.length == 0) {
                 winPlayers.push(player);
             } else {
-                if(player.currentCard > winPlayers[0].currentCard) {
-                    winPlayers = new Array();
-                    winPlayers.push(player);
-                } else if(player.currentCard == winPlayers[0].currentCard) { 
-                    winPlayers.push(player);
+                if(pointSum > 0)  {
+                    if(player.currentCard > winPlayers[0].currentCard) {
+                        winPlayers = new Array();
+                        winPlayers.push(player);
+                    } else if(player.currentCard == winPlayers[0].currentCard) { 
+                        winPlayers.push(player);
+                    }
+                } else {
+                    if(player.currentCard < winPlayers[0].currentCard) {
+                        winPlayers = new Array();
+                        winPlayers.push(player);
+                    } else if(player.currentCard == winPlayers[0].currentCard) { 
+                        winPlayers.push(player);
+                    }
                 }
             }
         }
@@ -164,6 +178,7 @@ class GameBusiness {
         } else {
             // add rewards to player            
             winPlayers[0].rewards = winPlayers[0].rewards.concat(this.game.currentCards);
+            winPlayers[0].points += pointSum;
 
             // 1 winner, reset playing cards
             this.game.currentCards = new Array();
