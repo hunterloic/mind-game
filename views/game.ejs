@@ -111,6 +111,26 @@
             border: 2px solid red;
             font-weight: bold;
         }
+
+        #game-end {
+            position:absolute;
+            top: 20px;
+            left: 20px;
+
+            padding:10px;
+
+            border: 1px solid black;
+            background-color:midnightblue;
+            opacity: 0.7;
+            
+
+            font-size: 30px;
+            color:navajowhite;
+            text-align:center;
+            
+            display: none;
+        }
+
     </style>
 
 </head>
@@ -408,6 +428,21 @@
         // -------------------------------
 
         // play card process
+        var socketGameFinished = (data) => {
+            gameExecuteList.push(() => {
+                game = data;
+
+                gameLock = true;
+                setTimeout(()=> {
+                var winners = "";
+                    $("#game-winners").html(game.winners.join(","));
+                    $("#game-end").css("display", "block");
+                    gameLock = false;
+                }, 3500);
+            });
+        };
+
+        // play card process
         var socketPlayCard = (data) => {
             gameExecuteList.push(() => {
                 game = data.game;
@@ -421,7 +456,7 @@
                 game = data;
                 displayOtherPlayersCard();
                 
-                // gameLock = true;
+                gameLock = true;
                 // clearInterval(gameExecutionLoop);
                 setTimeout(()=> {
                     // gameLock = false;
@@ -431,6 +466,7 @@
                     displayCurrentCards();
                     displayUserPoints();
                     clearPlayedCard();
+                    gameLock = false;
                     
                 }, 2500);
 
@@ -454,12 +490,10 @@
 
         // 
         var displayOtherPlayersCard = () => {
-            gameExecuteList.push(() => {
-                game.players.filter((p) => { return p.name != username }).forEach((p) => {
-                    var $card = getOtherPlayerCardEle(p.name);;
-                    $card.removeClass("unknown");
-                    $card.html(p.previousCard);
-                });
+            game.players.filter((p) => { return p.name != username }).forEach((p) => {
+                var $card = getOtherPlayerCardEle(p.name);;
+                $card.removeClass("unknown");
+                $card.html(p.previousCard);
             });
         }
 
@@ -508,7 +542,7 @@
             gameExecuteList.push(() => {
                 clearInterval(gameExecutionLoop);
                 alert(JSON.stringify(data));
-                window.location.href = "/game?host=" + game.host;
+                window.location.href = "/";
             });
         }
 
@@ -537,10 +571,12 @@
             socket.on('gameStart', socketGameStart);
             socket.on('playCard', socketPlayCard);
             socket.on('turnAllCardsPlayed', socketTurnAllCardsPlayed);
+            socket.on('gameFinished', socketGameFinished);
 
             // UI events
             $("#btn-start").click(btnStartClick);
             $("#btn-leave").click(btnLeaveClick);
+            $("#btn-leave-gamne-end").click(btnLeaveClick);
 
             if(game.status == 1) {
                 // If game is started, display game
@@ -601,6 +637,15 @@
         <div id="user-played-card">
         </div>
         <div id="user-cards">
+        </div>
+    </div>
+
+    <div id="game-end">
+        <div>Game has finished !</div>
+        <div>The winner(s) are / is : </div>
+        <div id="game-winners"></div>
+        <div>
+            <button id="btn-leave-gamne-end">Leave</button>
         </div>
     </div>
 

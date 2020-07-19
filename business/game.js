@@ -211,16 +211,6 @@ class GameBusiness {
         }
         this.game.winners = winners;
     }
-
-    restart() {
-        this.game.deck = new Array();
-        
-        for(var i = -5; i <= 10; i++) {
-            this.game.deck.push(i);
-        }
-
-        this.game.shuffle();
-    }
 }
 
 module.exports = GameBusiness;

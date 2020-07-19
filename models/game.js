@@ -8,8 +8,11 @@ class Game {
         this.winners = new Array();
         this.currentCards = new Array(); // List currently playing cards
         this.lock = false;
+    }
 
-        for(var i = -5; i <= 10; i++) {
+    initializeDeck(deckMin, deckMax) {
+        this.deck = new Array();
+        for(var i = deckMin; i <= deckMax; i++) {
             if(i != 0) {
                 this.deck.push(i);
             }

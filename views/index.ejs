@@ -73,6 +73,14 @@
                                     <input type="hidden" value="<%= game.host %>" name="host"></input>
                                 </form>
                             </td>
+                            <% if(username == game.host) { %>
+                                <td>
+                                    <form action="/game/delete" method="POST">
+                                        <input type="submit" value="Delete" />
+                                        <input type="hidden" value="<%= game.host %>" name="host"></input>
+                                    </form>
+                                </td>
+                            <% } %>
                         </tr>
                     <% }); %>
                 </table>

@@ -67,11 +67,22 @@ app.get('/', (req, res) => {
 app.post('/game', (req, res, next) => {
     try {
         var game = new GameModel(req.session.username);
+        game.initializeDeck(SiteBusiness.getConfig().DeckMin, SiteBusiness.getConfig().DeckMax);
         if(!SiteBusiness.addGame(game)) {
             next(new Error(SiteBusiness.error));
             return;
         }
         res.redirect('game?host=' + game.host);
+    } catch(ex) {
+        console.log(ex);
+        next(new Error(ex));
+    }
+});
+
+app.post('/game/delete', (req, res, next) => {
+    try {
+        SiteBusiness.removeGame(req.body.host)
+        res.redirect('/');
     } catch(ex) {
         console.log(ex);
         next(new Error(ex));

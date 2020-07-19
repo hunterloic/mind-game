@@ -168,12 +168,10 @@ const socket = (io) => {
 
                     if(gameBusiness.game.deck.length > 0) {
                         gameBusiness.startNewTurn();
-                    }
-
-                    gameBusiness.sendToAllSocket('turnAllCardsPlayed', gameBusiness.game);
-                    
-                    if(gameBusiness.game.deck.length == 0) {
+                        gameBusiness.sendToAllSocket('turnAllCardsPlayed', gameBusiness.game);
+                    } else {
                         gameBusiness.calculateWinner();
+                        gameBusiness.sendToAllSocket('turnAllCardsPlayed', gameBusiness.game);
                         gameBusiness.sendToAllSocket('gameFinished', gameBusiness.game);
                     }
                 }
