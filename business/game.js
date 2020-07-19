@@ -142,28 +142,16 @@ class GameBusiness {
 
         // search winners
         var winPlayers = new Array();
-        for(var i = 0; i<this.game.players.length; i++) {
-            var player = this.game.players[i];
-            if(winPlayers.length == 0) {
-                winPlayers.push(player);
-            } else {
-                if(pointSum > 0)  {
-                    if(player.currentCard < winPlayers[0].currentCard) {
-                        winPlayers = new Array();
-                        winPlayers.push(player);
-                    } else if(player.currentCard == winPlayers[0].currentCard) { 
-                        winPlayers.push(player);
-                    }
-                } else {
-                    if(player.currentCard > winPlayers[0].currentCard) {
-                        winPlayers = new Array();
-                        winPlayers.push(player);
-                    } else if(player.currentCard == winPlayers[0].currentCard) { 
-                        winPlayers.push(player);
-                    }
-                }
-            }
+        var winCard;
+        var playerCards = this.game.players.map((p) => { return p.currentCard });
+
+        if(pointSum > 0) {
+            winCard = Math.max(...playerCards);
+        } else {
+            winCard = Math.min(...playerCards);
         }
+
+        winPlayers = this.game.players.filter((p) => { return p.currentCard == winCard});
 
         // update player cards
         this.game.players.forEach((p) => {
