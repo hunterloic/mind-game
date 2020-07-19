@@ -148,14 +148,14 @@ class GameBusiness {
                 winPlayers.push(player);
             } else {
                 if(pointSum > 0)  {
-                    if(player.currentCard > winPlayers[0].currentCard) {
+                    if(player.currentCard < winPlayers[0].currentCard) {
                         winPlayers = new Array();
                         winPlayers.push(player);
                     } else if(player.currentCard == winPlayers[0].currentCard) { 
                         winPlayers.push(player);
                     }
                 } else {
-                    if(player.currentCard < winPlayers[0].currentCard) {
+                    if(player.currentCard > winPlayers[0].currentCard) {
                         winPlayers = new Array();
                         winPlayers.push(player);
                     } else if(player.currentCard == winPlayers[0].currentCard) { 
